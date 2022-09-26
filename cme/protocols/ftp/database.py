@@ -17,6 +17,6 @@ class database:
         db_conn.execute('''CREATE TABLE "hosts" (
             "id" integer PRIMARY KEY,
             "ip" text,
-            "hostname" text,
-            "port" integer
+            "port" integer,
+            "server_banner" text
             )''')

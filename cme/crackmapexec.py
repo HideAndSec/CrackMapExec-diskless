@@ -11,7 +11,6 @@ from cme.cli import gen_cli_args
 from cme.loaders.protocol_loader import protocol_loader
 from cme.loaders.module_loader import module_loader
 from cme.servers.http import CMEServer
-from cme.first_run import first_run_setup
 from cme.context import Context
 from concurrent.futures import ThreadPoolExecutor
 from pprint import pformat
@@ -25,7 +24,6 @@ import cme.helpers.powershell as powershell
 import cme
 import shutil
 import webbrowser
-import sqlite3
 import random
 import os
 import sys
@@ -49,7 +47,7 @@ async def monitor_threadpool(pool, targets):
             logging.debug("Stopped thread poller")
             break
 
-async def run_protocol(loop, protocol_obj, args, db, target, jitter):
+async def run_protocol(loop, protocol_obj, args, target, jitter):
     try:
         if jitter:
             value = random.choice(range(jitter[0], jitter[1]))
@@ -61,7 +59,6 @@ async def run_protocol(loop, protocol_obj, args, db, target, jitter):
             functools.partial(
                 protocol_obj,
                 args,
-                db,
                 str(target)
             )
         )
@@ -76,10 +73,8 @@ async def run_protocol(loop, protocol_obj, args, db, target, jitter):
     except asyncio.CancelledError:
         logging.debug("Stopping thread")
         thread.cancel()
-    except sqlite3.OperationalError as e:
-        logging.debug("Sqlite error - sqlite3.operationalError - {}".format(str(e)))
 
-async def start_threadpool(protocol_obj, args, db, targets, jitter):
+async def start_threadpool(protocol_obj, args, targets, jitter):
     pool = ThreadPoolExecutor(max_workers=args.threads + 1)
     loop = asyncio.get_running_loop()
     loop.set_default_executor(pool)
@@ -93,7 +88,6 @@ async def start_threadpool(protocol_obj, args, db, targets, jitter):
             loop,
             protocol_obj,
             args,
-            db,
             target,
             jitter
         )
@@ -112,16 +106,11 @@ async def start_threadpool(protocol_obj, args, db, targets, jitter):
         pool.shutdown(wait=True)
 
 def main():
-    first_run_setup(logger)
-
     args = gen_cli_args()
 
     if args.darrell:
-        links = open(os.path.join(os.path.dirname(cme.__file__), 'data', 'videos_for_darrell.harambe')).read().splitlines()
-        try:
-            webbrowser.open(random.choice(links))
-        except:
-            sys.exit(1)
+        print("No")
+        sys.exit(1)
 
     cme_path = os.path.expanduser('~/.cme')
 
@@ -133,7 +122,6 @@ def main():
     targets = []
     jitter = None
     server_port_dict = {'http': 80, 'https': 443, 'smb': 445}
-    current_workspace = config.get('CME', 'workspace')
 
     if args.verbose:
         setup_debug_logger()
@@ -184,24 +172,24 @@ def main():
         powershell.obfuscate_ps_scripts = True
 
     p_loader = protocol_loader()
-    protocol_path = p_loader.get_protocols()[args.protocol]['path']
-    protocol_db_path = p_loader.get_protocols()[args.protocol]['dbpath']
+    protocol_object = p_loader.get_protocols()[args.protocol]
+    #protocol_db_path = p_loader.get_protocols()[args.protocol]['dbpath']
 
-    protocol_object = getattr(p_loader.load_protocol(protocol_path), args.protocol)
-    protocol_db_object = getattr(p_loader.load_protocol(protocol_db_path), 'database')
+    #protocol_object = getattr(p_loader.load_protocol(protocol_path), args.protocol)
+    #protocol_db_object = getattr(p_loader.load_protocol(protocol_db_path), 'database')
 
-    db_path = os.path.join(cme_path, 'workspaces', current_workspace, args.protocol + '.db')
+    #db_path = os.path.join(cme_path, 'workspaces', current_workspace, args.protocol + '.db')
     # set the database connection to autocommit w/ isolation level
-    db_connection = sqlite3.connect(db_path, check_same_thread=False)
-    db_connection.text_factory = str
-    db_connection.isolation_level = None
-    db = protocol_db_object(db_connection)
+    #db_connection = sqlite3.connect(db_path, check_same_thread=False)
+    #db_connection.text_factory = str
+    #db_connection.isolation_level = None
+    #db = protocol_db_object(db_connection)
 
     setattr(protocol_object, 'config', config)
 
     if hasattr(args, 'module'):
 
-        loader = module_loader(args, db, logger)
+        loader = module_loader(args, logger)
 
         if args.list_modules:
             modules = loader.get_modules()
@@ -220,10 +208,10 @@ def main():
 
         elif args.module:
             modules = loader.get_modules()
-            for name, props in modules.items():
-                if args.module.lower() == name.lower():
-                    module = loader.init_module(props['path'])
-                    setattr(protocol_object, 'module', module)
+            for mod, props in modules.items():
+                if args.module.lower() == props["name"].lower():
+                    mod = loader.init_module(mod) # Set the options
+                    setattr(protocol_object, 'module', mod)
                     break
 
             if not module:
@@ -248,14 +236,14 @@ def main():
                 if not args.server_port:
                     args.server_port = server_port_dict[args.server]
 
-                context = Context(db, logger, args)
+                context = Context(logger, args)
                 module_server = CMEServer(module, context, logger, args.server_host, args.server_port, args.server)
                 module_server.start()
                 setattr(protocol_object, 'server', module_server.server)
 
     try:
         asyncio.run(
-            start_threadpool(protocol_object, args, db, targets, jitter)
+            start_threadpool(protocol_object, args, targets, jitter)
         )
     except KeyboardInterrupt:
         logging.debug("Got keyboard interrupt")

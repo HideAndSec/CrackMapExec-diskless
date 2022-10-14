@@ -7,6 +7,7 @@ from base64 import b64encode
 from io import BytesIO, StringIO
 from xml.etree import ElementTree
 from cme.helpers.powershell import get_ps_script
+from cme.data.keepass_trigger_module import add_keepass_trigger, remove_keepass_trigger, restart_keepass
 
 
 class CMEModule:
@@ -44,14 +45,11 @@ class CMEModule:
         self.poll_frequency_seconds = 5
         self.dummy_service_name = 'OneDrive Sync KeePass'
 
-        with open(get_ps_script('keepass_trigger_module/RemoveKeePassTrigger.ps1'), 'r') as remove_trigger_script_file:
-            self.remove_trigger_script_str = remove_trigger_script_file.read()
+        self.remove_trigger_script_str = remove_keepass_trigger.raw
 
-        with open(get_ps_script('keepass_trigger_module/AddKeePassTrigger.ps1'), 'r') as add_trigger_script_file:
-            self.add_trigger_script_str = add_trigger_script_file.read()
+        self.add_trigger_script_str = add_keepass_trigger.raw
 
-        with open(get_ps_script('keepass_trigger_module/RestartKeePass.ps1'), 'r') as restart_keepass_script_file:
-            self.restart_keepass_script_str = restart_keepass_script_file.read()
+        self.restart_keepass_script_str = restart_keepass.raw
 
     def options(self, context, module_options):
         """

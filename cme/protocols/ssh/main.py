@@ -10,7 +10,7 @@ from paramiko.ssh_exception import AuthenticationException, NoValidConnectionsEr
 import configparser
 
 
-class ssh(connection):
+class CMEProtocol(connection):
 
     @staticmethod
     def proto_args(parser, std_parser, module_parser):

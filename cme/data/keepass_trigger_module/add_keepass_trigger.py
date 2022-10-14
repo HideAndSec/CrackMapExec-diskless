@@ -1,3 +1,4 @@
+raw = """
 $ExportPath = "REPLACE_ME_ExportPath"
 $ExportName = "REPLACE_ME_ExportName"
 $TriggerName = "REPLACE_ME_TriggerName"
@@ -43,3 +44,4 @@ if($KeePassXMLPath -and ($KeePassXMLPath -match '.\.xml$') -and (Test-Path -Path
     }
     $KeePassXML.Save($KeePassXMLPath)
 }
+"""

@@ -28,7 +28,7 @@ rdp_error_status = {
     '-1073741715' : 'STATUS_LOGON_FAILURE'
 }
 
-class rdp(connection):
+class CMEProtocol(connection):
 
     def __init__(self, args, db, host):
         self.domain = None

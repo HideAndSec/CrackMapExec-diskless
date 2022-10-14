@@ -17,7 +17,7 @@ from impacket.tds import SQLErrorException, TDS_LOGINACK_TOKEN, TDS_ERROR_TOKEN,
     TDS_ENVCHANGE_VARCHAR, TDS_ENVCHANGE_DATABASE, TDS_ENVCHANGE_LANGUAGE, TDS_ENVCHANGE_CHARSET, TDS_ENVCHANGE_PACKETSIZE
 
 
-class mssql(connection):
+class CMEProtocol(connection):
     def __init__(self, args, db, host):
         self.mssql_instances = None
         self.domain = None

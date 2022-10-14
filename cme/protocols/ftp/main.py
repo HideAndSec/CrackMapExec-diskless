@@ -9,7 +9,7 @@ from ftplib import FTP, error_reply, error_temp, error_perm, error_proto
 import configparser
 
 
-class ftp(connection):
+class CMEProtocol(connection):
 
     @staticmethod
     def proto_args(parser, std_parser, module_parser):

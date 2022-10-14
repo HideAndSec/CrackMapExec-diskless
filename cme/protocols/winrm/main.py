@@ -23,7 +23,7 @@ class SuppressFilter(logging.Filter):
     def filter(self, record):
         return 'wsman' not in record.getMessage()
 
-class winrm(connection):
+class CMEProtocol(connection):
 
     def __init__(self, args, db, host):
         self.domain = None

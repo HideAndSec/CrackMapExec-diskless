@@ -4,8 +4,11 @@
 import argparse
 import sys
 from argparse import RawTextHelpFormatter
+import importlib
+
 from cme.loaders.protocol_loader import protocol_loader
 from cme.helpers.logger import highlight
+
 from termcolor import colored
 
 def gen_cli_args():
@@ -71,9 +74,9 @@ def gen_cli_args():
     module_parser.add_argument("--server-port", metavar='PORT', type=int, help='start the server on the specified port')
     module_parser.add_argument("--connectback-host", type=str, metavar='CHOST', help='IP for the remote system to connect back to (default: same as server-host)')
 
-    for protocol in protocols.keys():
-        protocol_object = p_loader.load_protocol(protocols[protocol]['path'])
-        subparsers = getattr(protocol_object, protocol).proto_args(subparsers, std_parser, module_parser)
+    for protocol in protocols:
+        prot = importlib.import_module(f"cme.protocols.{protocol}.main").CMEProtocol
+        subparsers = prot.proto_args(subparsers, std_parser, module_parser)
 
     if len(sys.argv) == 1:
         parser.print_help()

@@ -1,3 +1,4 @@
+raw = """
 $KeePassXMLPath = "REPLACE_ME_KeePassXMLPath"
 $TriggerName = "REPLACE_ME_TriggerName"
 if($KeePassXMLPath -and ($KeePassXMLPath -match '.\.xml$') -and (Test-Path -Path $KeePassXMLPath) ) {
@@ -16,3 +17,4 @@ if($KeePassXMLPath -and ($KeePassXMLPath -match '.\.xml$') -and (Test-Path -Path
 	catch {
 	}   
 }
+"""

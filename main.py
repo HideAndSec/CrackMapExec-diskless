@@ -1,0 +1,1 @@
+from cme.crackmapexec import main; main() # Wrote automatically by Phantom

@@ -120,7 +120,7 @@ def requires_smb_server(func):
 
     return wraps(func)(_decorator)
 
-class smb(connection):
+class CMEProtocol(connection):
 
     def __init__(self, args, db, host):
         self.domain = None
@@ -235,7 +235,7 @@ class smb(connection):
             dce.connect()
             try:
                 dce.bind(MSRPC_UUID_PORTMAP, transfer_syntax=('71710533-BEBA-4937-8319-B5DBEF9CCC36', '1.0'))
-            except (DCERPCException, e):
+            except DCERPCException as e:
                 if str(e).find('syntaxes_not_supported') >= 0:
                     dce.disconnect()
                     return 32

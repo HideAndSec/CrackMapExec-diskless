@@ -250,11 +250,7 @@ class CMEDBMenu(cmd.Cmd):
             print("[*] Creating workspace '{}'".format(new_workspace))
             os.mkdir(os.path.join(self.workspace_dir, new_workspace))
 
-            for protocol in self.protocols.keys():
-                try:
-                    protocol_object = self.p_loader.load_protocol(self.protocols[protocol]['dbpath'])
-                except KeyError:
-                    continue
+            for protocol, protocol_object in self.protocols.items():
 
                 proto_db_path = os.path.join(self.workspace_dir, new_workspace, protocol + '.db')
 

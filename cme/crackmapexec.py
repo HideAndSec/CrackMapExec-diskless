@@ -57,7 +57,7 @@ async def run_protocol(loop, protocol_obj, args, target, jitter):
         thread = loop.run_in_executor(
             None,
             functools.partial(
-                protocol_obj,
+                protocol_obj.main.CMEProtocol,
                 args,
                 str(target)
             )

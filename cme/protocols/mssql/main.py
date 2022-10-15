@@ -18,14 +18,14 @@ from impacket.tds import SQLErrorException, TDS_LOGINACK_TOKEN, TDS_ERROR_TOKEN,
 
 
 class CMEProtocol(connection):
-    def __init__(self, args, db, host):
+    def __init__(self, args, host):
         self.mssql_instances = None
         self.domain = None
         self.server_os = None
         self.hash = None
         self.os_arch = None
 
-        connection.__init__(self, args, db, host)
+        connection.__init__(self, args, host)
 
     @staticmethod
     def proto_args(parser, std_parser, module_parser):

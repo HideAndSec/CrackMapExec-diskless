@@ -55,7 +55,7 @@ def get_conditional_action(baseAction):
 
 class CMEProtocol(connection):
 
-    def __init__(self, args, db, host):
+    def __init__(self, args, host):
         self.domain = None
         self.server_os = None
         self.os_arch = 0
@@ -73,7 +73,7 @@ class CMEProtocol(connection):
         self.smb_share_name = smb_share_name
         self.admin_privs = False
 
-        connection.__init__(self, args, db, host)
+        connection.__init__(self, args, host)
 
     @staticmethod
     def proto_args(parser, std_parser, module_parser):

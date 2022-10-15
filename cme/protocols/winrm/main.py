@@ -25,12 +25,12 @@ class SuppressFilter(logging.Filter):
 
 class CMEProtocol(connection):
 
-    def __init__(self, args, db, host):
+    def __init__(self, args, host):
         self.domain = None
         self.server_os = None
         self.output_filename = None
 
-        connection.__init__(self, args, db, host)
+        connection.__init__(self, args, host)
 
     @staticmethod
     def proto_args(parser, std_parser, module_parser):

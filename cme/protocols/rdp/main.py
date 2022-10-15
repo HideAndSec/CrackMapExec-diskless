@@ -30,7 +30,7 @@ rdp_error_status = {
 
 class CMEProtocol(connection):
 
-    def __init__(self, args, db, host):
+    def __init__(self, args, host):
         self.domain = None
         self.server_os = None
         self.iosettings = RDPIOSettings()
@@ -53,7 +53,7 @@ class CMEProtocol(connection):
         self.nla = True
         self.hybrid = False
 
-        connection.__init__(self, args, db, host)
+        connection.__init__(self, args, host)
 
     @staticmethod
     def proto_args(parser, std_parser, module_parser):

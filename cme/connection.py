@@ -38,9 +38,8 @@ def requires_admin(func):
 
 class connection(object):
 
-    def __init__(self, args, db, host):
+    def __init__(self, args, host):
         self.args = args
-        self.db = db
         self.hostname = host
         self.conn = None
         self.admin_privs = False
@@ -121,7 +120,7 @@ class connection(object):
                                           'hostname': self.hostname
                                          })
 
-        context = Context(self.db, module_logger, self.args)
+        context = Context(module_logger, self.args)
         context.localip  = self.local_ip
 
         if hasattr(self.module, 'on_request') or hasattr(self.module, 'has_response'):
@@ -164,36 +163,6 @@ class connection(object):
     def login(self):
         if self.args.kerberos:
             if self.kerberos_login(self.domain, self.aesKey, self.kdcHost): return True
-        else:
-            for cred_id in self.args.cred_id:
-                with sem:
-                    if cred_id.lower() == 'all':
-                        creds = self.db.get_credentials()
-                    else:
-                        creds = self.db.get_credentials(filterTerm=int(cred_id))
-
-                    for cred in creds:
-                        logging.debug(cred)
-                        try:
-                            c_id, domain, username, password, credtype, pillaged_from = cred
-
-                            if credtype and password:
-
-                                if not domain: domain = self.domain
-
-                                if self.args.local_auth:
-                                    domain = self.domain
-                                elif self.args.domain:
-                                    domain = self.args.domain
-
-                                if credtype == 'hash' and not self.over_fail_limit(username):
-                                    if self.hash_login(domain, username, password): return True
-
-                                elif credtype == 'plaintext' and not self.over_fail_limit(username):
-                                    if self.plaintext_login(domain, username, password): return True
-
-                        except IndexError:
-                            self.logger.error("Invalid database credential ID!")
 
             for user in self.args.username:
                 if isfile(user):

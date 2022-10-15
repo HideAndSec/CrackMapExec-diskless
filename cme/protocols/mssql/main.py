@@ -110,7 +110,6 @@ class CMEProtocol(connection):
                 self.logger.error("Error retrieving host domain: {} specify one manually with the '-d' flag".format(e))
 
         self.mssql_instances = self.conn.getInstances(0)
-        self.db.add_computer(self.host, self.hostname, self.domain, self.server_os, len(self.mssql_instances))
 
         try:
             self.conn.disconnect()
@@ -171,10 +170,6 @@ class CMEProtocol(connection):
             self.username = username
             self.domain = domain
             self.check_if_admin()
-            self.db.add_credential('plaintext', domain, username, password)
-
-            if self.admin_privs:
-                self.db.add_admin_user('plaintext', domain, username, password, self.host)
 
             out = u'{}{}:{} {}'.format('{}\\'.format(domain) if not self.args.local_auth else '',
                                     username,
@@ -218,10 +213,6 @@ class CMEProtocol(connection):
             self.username = username
             self.domain = domain
             self.check_if_admin()
-            self.db.add_credential('hash', domain, username, ntlm_hash)
-
-            if self.admin_privs:
-                self.db.add_admin_user('hash', domain, username, ntlm_hash, self.host)
 
             out = u'{}\\{} {} {}'.format(domain,
                                         username,

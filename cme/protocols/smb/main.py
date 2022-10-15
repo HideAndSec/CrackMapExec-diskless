@@ -273,8 +273,6 @@ class CMEProtocol(connection):
         if not self.domain:
             self.domain = self.hostname
 
-        self.db.add_computer(self.host, self.hostname, self.domain, self.server_os, self.smbv1, self.signing)
-
         try:
             '''
                 DC's seem to want us to logoff first, windows workstations sometimes reset the connection
@@ -381,10 +379,6 @@ class CMEProtocol(connection):
             self.conn.login(self.username, self.password, domain)
 
             self.check_if_admin()
-            self.db.add_credential('plaintext', domain, self.username, self.password)
-
-            if self.admin_privs:
-                self.db.add_admin_user('plaintext', domain, self.username, self.password, self.host)
 
             out = u'{}\\{}:{} {}'.format(domain,
                                          self.username,
@@ -445,10 +439,6 @@ class CMEProtocol(connection):
             self.conn.login(self.username, '', domain, lmhash, nthash)
 
             self.check_if_admin()
-            self.db.add_credential('hash', domain, self.username, nthash)
-
-            if self.admin_privs:
-                self.db.add_admin_user('hash', domain, self.username, nthash, self.host)
 
             out = u'{}\\{}:{} {}'.format(domain,
                                          self.username,
@@ -630,14 +620,6 @@ class CMEProtocol(connection):
 
     def shares(self):
         temp_dir = ntpath.normpath("\\" + gen_random_string())
-        #computer_id = self.db.get_computers(filterTerm=self.host)[0][0]
-        try:
-            user_id = self.db.get_user(
-                self.domain.split('.')[0].upper(),
-                self.username
-            )[0][0]
-        except:
-            pass
         permissions = []
 
         try:
@@ -664,12 +646,6 @@ class CMEProtocol(connection):
 
                 permissions.append(share_info)
 
-                if share_name != "IPC$":
-                    try:
-                        self.db.add_share(self.hostname, user_id, share_name, share_remark, read, write)
-                    except:
-                        pass
-
             self.logger.success('Enumerated shares')
             self.logger.highlight('{:<15} {:<15} {}'.format('Share', 'Permissions', 'Remark'))
             self.logger.highlight('{:<15} {:<15} {}'.format('-----', '-----------', '------'))
@@ -688,9 +664,6 @@ class CMEProtocol(connection):
 
     def get_dc_ips(self):
         dc_ips = []
-
-        for dc in self.db.get_domain_controllers(domain=self.domain):
-            dc_ips.append(dc[1])
 
         if not dc_ips:
             dc_ips.append(self.host)
@@ -740,22 +713,13 @@ class CMEProtocol(connection):
                     if group.name:
                         if not self.args.local_groups:
                             self.logger.highlight('{:<40} membercount: {}'.format(group.name, group.membercount))
-                            self.db.add_group(self.hostname, group.name)
                         else:
                             domain, name = group.name.split('/')
                             self.logger.highlight('{}\\{}'.format(domain.upper(), name))
-                            try:
-                                group_id = self.db.get_groups(groupName=self.args.local_groups, groupDomain=domain)[0][0]
-                            except IndexError:
-                                group_id = self.db.add_group(domain, self.args.local_groups)
 
                             # yo dawg, I hear you like groups. So I put a domain group as a member of a local group which is also a member of another local group.
                             # (╯°□°）╯︵ ┻━┻
 
-                            if not group.isgroup:
-                                self.db.add_user(domain, name, group_id)
-                            elif group.isgroup:
-                                self.db.add_group(domain, name)
                 break
             except Exception as e:
                 self.logger.error('Error enumerating local groups of {}: {}'.format(self.host, e))
@@ -792,16 +756,6 @@ class CMEProtocol(connection):
                     self.logger.success('Enumerated members of domain group')
                     for group in groups:
                         self.logger.highlight('{}\\{}'.format(group.memberdomain, group.membername))
-
-                        try:
-                            group_id = self.db.get_groups(groupName=self.args.groups, groupDomain=group.groupdomain)[0][0]
-                        except IndexError:
-                            group_id = self.db.add_group(group.groupdomain, self.args.groups)
-
-                        if not group.isgroup:
-                            self.db.add_user(group.memberdomain, group.membername, group_id)
-                        elif group.isgroup:
-                            self.db.add_group(group.groupdomain, group.groupname)
                     break
                 except Exception as e:
                     self.logger.error('Error enumerating domain group members using dc ip {}: {}'.format(dc_ip, e))
@@ -819,7 +773,6 @@ class CMEProtocol(connection):
                         if bool(group.isgroup) is True:
                             # Since there isn't a groupmemeber attribute on the returned object from get_netgroup we grab it from the distinguished name
                             domain = self.domainfromdsn(group.distinguishedname)
-                            self.db.add_group(domain, group.samaccountname)
                     break
                 except Exception as e:
                     self.logger.error('Error enumerating domain group using dc ip {}: {}'.format(dc_ip, e))
@@ -839,7 +792,6 @@ class CMEProtocol(connection):
                 for user in users:
                     domain = self.domainfromdsn(user.distinguishedname)
                     self.logger.highlight('{}\\{:<30} badpwdcount: {} desc: {}'.format(domain,user.samaccountname,getattr(user,'badpwdcount',0), user.description[0] if hasattr(user,'description') else '' ))
-                    #self.db.add_user(domain, user.samaccountname)
                 break
             except Exception as e:
                 self.logger.error('Error enumerating domain users using dc ip {}: {}'.format(dc_ip, e))
@@ -1057,25 +1009,18 @@ class CMEProtocol(connection):
     def sam(self):
         self.enable_remoteops()
 
-        host_id = self.db.get_computers(filterTerm=self.host)[0][0]
-
-        def add_sam_hash(sam_hash, host_id):
-            add_sam_hash.sam_hashes += 1
-            self.logger.highlight(sam_hash)
-            username,_,lmhash,nthash,_,_,_ = sam_hash.split(':')
-            self.db.add_credential('hash', self.hostname, username, ':'.join((lmhash, nthash)), pillaged_from=host_id)
-        add_sam_hash.sam_hashes = 0
-
         if self.remote_ops and self.bootkey:
             #try:
             SAMFileName = self.remote_ops.saveSAM()
-            SAM = SAMHashes(SAMFileName, self.bootkey, isRemote=True, perSecretCallback=lambda secret: add_sam_hash(secret, host_id))
+
+            def dummy_callback():
+                pass
+            
+            SAM = SAMHashes(SAMFileName, self.bootkey, isRemote=True, perSecretCallback=dummy_callback)
 
             self.logger.success('Dumping SAM hashes')
             SAM.dump()
             SAM.export(self.output_filename)
-
-            self.logger.success('Added {} SAM hashes to the database'.format(highlight(add_sam_hash.sam_hashes)))
 
             #except Exception as e:
                 #self.logger.error('SAM hashes extraction failed: {}'.format(e))
@@ -1124,38 +1069,6 @@ class CMEProtocol(connection):
         use_vss_method = False
         NTDSFileName   = None
 
-        host_id = self.db.get_computers(filterTerm=self.host)[0][0]
-
-        def add_ntds_hash(ntds_hash, host_id):
-            add_ntds_hash.ntds_hashes += 1
-            if "Enabled" in ntds_hash and self.args.enabled:
-                ntds_hash = ntds_hash.split(" ")[0]
-                self.logger.highlight(ntds_hash)
-            else:
-                ntds_hash = ntds_hash.split(" ")[0]
-                self.logger.highlight(ntds_hash)
-            if ntds_hash.find('$') == -1:
-                if ntds_hash.find('\\') != -1:
-                    domain, hash = ntds_hash.split('\\')
-                else:
-                    domain = self.domain
-                    hash = ntds_hash
-
-                try:
-                    username,_,lmhash,nthash,_,_,_ = hash.split(':')
-                    parsed_hash = ':'.join((lmhash, nthash))
-                    if validate_ntlm(parsed_hash):
-                        self.db.add_credential('hash', domain, username, parsed_hash, pillaged_from=host_id)
-                        add_ntds_hash.added_to_db += 1
-                        return
-                    raise
-                except:
-                    logging.debug("Dumped hash is not NTLM, not adding to db for now ;)")
-            else:
-                logging.debug("Dumped hash is a computer account, not adding to db")
-        add_ntds_hash.ntds_hashes = 0
-        add_ntds_hash.added_to_db = 0
-
         if self.remote_ops: 
             try:
                 if self.args.ntds == 'vss':
@@ -1171,16 +1084,19 @@ class CMEProtocol(connection):
                 #        os.unlink(resumeFile)
                 self.logger.error(e)
 
+        def add_ntds_hash(ntds_hash, host_id=""):
+            add_ntds_hash.ntds_hashes += 1
+
         NTDS = NTDSHashes(NTDSFileName, self.bootkey, isRemote=True, history=False, noLMHash=True,
                         remoteOps=self.remote_ops, useVSSMethod=use_vss_method, justNTLM=True,
                         pwdLastSet=False, resumeSession=None, outputFileName=self.output_filename,
                         justUser=self.args.userntds if self.args.userntds else None, printUserStatus=True,
-                        perSecretCallback = lambda secretType, secret : add_ntds_hash(secret, host_id))
+                        perSecretCallback = lambda secretType, secret : add_ntds_hash(secret, ""))
 
         try:
             self.logger.success('Dumping the NTDS, this could take a while so go grab a redbull...')
             NTDS.dump()
-            self.logger.success('Dumped {} NTDS hashes to {} of which {} were added to the database'.format(highlight(add_ntds_hash.ntds_hashes), self.output_filename + '.ntds', highlight(add_ntds_hash.added_to_db)))
+            self.logger.success('Dumped {} NTDS hashes to {} !'.format(highlight(add_ntds_hash.ntds_hashes), self.output_filename + '.ntds'))
         except Exception as e:
             #if str(e).find('ERROR_DS_DRA_BAD_DN') >= 0:
                 # We don't store the resume file if this error happened, since this error is related to lack
